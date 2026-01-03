@@ -196,10 +196,7 @@ const FULL_DECK = [
   { color: 'green', text: '愛是我生命的核心。', textEn: 'Love is the core of my life.', theme: '愛的核心' },
   { color: 'green', text: '我選擇愛而非恐懼。', textEn: 'I choose love over fear.', theme: '選擇愛' },
 
-  // =================================================================
-  // BLUE (Throat Chakra) - 35 Cards (Already Provided)
-  // Theme: Communication, Truth, Expression, Listening
-  // =================================================================
+  // BLUE
   { color: 'blue', text: '我對自己負責。', textEn: 'I take responsibility for myself.', theme: '負責' },
   { color: 'blue', text: '我為自己說話。', textEn: 'I speak for myself.', theme: '自我表達' },
   { color: 'blue', text: '我可以自由地表達我的感覺。', textEn: 'I am free to express my feelings.', theme: '自由表達' },
@@ -236,10 +233,7 @@ const FULL_DECK = [
   { color: 'blue', text: '和平從我開始。', textEn: 'Peace begins with me.', theme: '和平' },
   { color: 'blue', text: '我是冷靜且清晰的。', textEn: 'I am calm and clear.', theme: '冷靜' },
 
-  // =================================================================
-  // INDIGO (Third Eye Chakra) - 35 Cards
-  // Theme: Intuition, Wisdom, Imagination, Clarity, Insight
-  // =================================================================
+  // INDIGO
   { color: 'indigo', text: '我信任我的直覺，它引領我走在正確的道路上。', textEn: 'I trust my intuition; it leads me on the right path.', theme: '信任直覺' },
   { color: 'indigo', text: '我放下不再服務於我的舊信念。', textEn: 'I let go of old beliefs that no longer serve me.', theme: '放下舊念' },
   { color: 'indigo', text: '我擁有清晰的洞察力。', textEn: 'I possess clear insight.', theme: '洞察力' },
@@ -276,10 +270,7 @@ const FULL_DECK = [
   { color: 'indigo', text: '我看見每個人的神性。', textEn: 'I see the divinity in everyone.', theme: '神性' },
   { color: 'indigo', text: '我與宇宙智慧是連結的。', textEn: 'I am connected to universal wisdom.', theme: '宇宙智慧' },
 
-  // =================================================================
-  // VIOLET (Crown Chakra) - 35 Cards
-  // Theme: Spirituality, Unity, Divine Connection, Enlightenment, Peace
-  // =================================================================
+  // VIOLET
   { color: 'violet', text: '我與宇宙的愛與智慧連結。', textEn: 'I connect with the love and wisdom of the universe.', theme: '連結宇宙' },
   { color: 'violet', text: '我信任生命的安排，一切都是最好的發生。', textEn: 'I trust life\'s plan; everything happens for the best.', theme: '信任安排' },
   { color: 'violet', text: '我活出我生命的使命與目的。', textEn: 'I live out my life\'s mission and purpose.', theme: '生命使命' },
@@ -463,26 +454,23 @@ const generateSimulatedInterpretation = (card, question, index, total) => {
 
 // --- COMPONENTS ---
 
-const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoomed = false }) => {
+const Card = ({ color, text, textEn, isFlipped, size = 'normal' }) => {
   const colorData = COLOR_MAP[color] || COLOR_MAP.red;
   
-  // Dynamic styles based on size and zoom state
-  const containerClass = isZoomed
-    ? 'w-full max-w-sm aspect-[2/3] max-h-[80vh]' // Constrain height strictly
-    : size === 'small' 
-      ? 'w-24 h-36 md:hover:scale-125 md:hover:z-10 transition-transform duration-300' // Added hover zoom for desktop
+  // Dynamic styles based on size
+  const containerClass = size === 'small' 
+      ? 'w-24 h-36 md:hover:scale-[1.2] md:hover:z-10 transition-transform duration-300 origin-center'
       : 'w-64 h-96';
 
   return (
     <div 
       className={`
-        relative transform-gpu cursor-pointer preserve-3d
+        relative transform-gpu preserve-3d
         ${containerClass}
         ${isFlipped ? 'rotate-y-0' : 'rotate-y-180'}
         flex-shrink-0
-        ${!isZoomed && 'transition-all duration-700'} 
+        transition-all duration-700
       `}
-      onClick={onClick}
       style={{ perspective: '1000px', transformStyle: 'preserve-3d' }}
     >
       {/* Front of Card (The Color & Text) */}
@@ -491,15 +479,14 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
         flex flex-col items-center justify-center text-center
         ${colorData.bg} text-white font-medium tracking-wide leading-relaxed
         overflow-y-auto hide-scrollbar
-        ${size === 'small' && !isZoomed ? 'p-2' : 'p-8'}
+        ${size === 'small' ? 'p-2' : 'p-8'}
       `}>
         {/* Decorations */}
-        <div className={`absolute top-4 left-4 opacity-50 ${size === 'small' && !isZoomed ? 'scale-50 top-2 left-2' : ''}`}><Sparkles size={20} /></div>
-        <div className={`absolute bottom-4 right-4 opacity-50 ${size === 'small' && !isZoomed ? 'scale-50 bottom-2 right-2' : ''}`}><Heart size={20} /></div>
+        <div className={`absolute top-4 left-4 opacity-50 ${size === 'small' ? 'scale-50 top-2 left-2' : ''}`}><Sparkles size={20} /></div>
+        <div className={`absolute bottom-4 right-4 opacity-50 ${size === 'small' ? 'scale-50 bottom-2 right-2' : ''}`}><Heart size={20} /></div>
         
         {/* Chinese Text */}
         <p className={`drop-shadow-md mb-4 font-bold ${
-          isZoomed ? 'text-2xl leading-relaxed' : 
           size === 'small' ? 'text-[10px] leading-tight mb-1' : 'text-xl leading-relaxed'
         }`}>
           {text}
@@ -508,7 +495,6 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
         {/* English Text */}
         {textEn && (
           <p className={`drop-shadow-sm font-serif italic opacity-90 ${
-            isZoomed ? 'text-lg mt-2' :
             size === 'small' ? 'text-[7px] leading-tight' : 'text-sm font-light'
           }`}>
             {textEn}
@@ -517,7 +503,7 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
 
         {/* Rainbow Label */}
         <p className={`absolute ${
-          size === 'small' && !isZoomed ? 'bottom-2 text-[6px]' : 'bottom-6 text-xs'
+          size === 'small' ? 'bottom-2 text-[6px]' : 'bottom-6 text-xs'
         } opacity-60 font-light tracking-widest uppercase`}>
           Rainbow Card
         </p>
@@ -581,9 +567,6 @@ export default function App() {
 
   // Rotating Title State
   const [titleIndex, setTitleIndex] = useState(0);
-
-  // Zoomed Card State
-  const [zoomedCard, setZoomedCard] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -952,11 +935,6 @@ export default function App() {
               textEn={card.textEn}
               isFlipped={true} 
               size={cardCount === 5 ? 'small' : 'normal'}
-              onClick={() => {
-                if (cardCount === 5) {
-                  setZoomedCard(card);
-                }
-              }}
             />
             <ColorBadge color={card.color} />
           </div>
@@ -1030,31 +1008,6 @@ export default function App() {
           </div>
         </div>
       </div>
-
-      {/* Zoom Modal - FIXED */}
-      {zoomedCard && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4"
-          onClick={() => setZoomedCard(null)}
-        >
-          <div className="relative transform transition-all animate-slide-up flex flex-col items-center max-h-[85vh] w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <button 
-              onClick={() => setZoomedCard(null)}
-              className="absolute -top-12 right-0 bg-white/20 text-white rounded-full p-2 hover:bg-white/40 z-10 backdrop-blur-sm"
-            >
-              <X size={24} />
-            </button>
-            <Card 
-              color={zoomedCard.color} 
-              text={zoomedCard.text}
-              textEn={zoomedCard.textEn}
-              isFlipped={true} 
-              size="normal" 
-              isZoomed={true}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 
