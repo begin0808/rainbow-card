@@ -25,8 +25,52 @@ import {
 
 // --- CONFIG: Backend URL ---
 // ⚠️ 請將您的 Google Apps Script 網址貼在下方引號中
-// 例如: "https://script.google.com/macros/s/AKfycbx.../exec"
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi_I8ImQQW6zul-Y9kjsoF8KVf28acHiS6YAelkRec-cATSa0-SpGiWN5N-YbRDaubjQ/exec"; 
+
+// --- DATA: Expert System Prompt (內建指令) ---
+const EXPERT_SYSTEM_PROMPT = `你現在是一位結合心理覺察、直覺閱讀、與清晰邏輯的彩虹卡解讀助手。
+你的任務是協助我解讀我抽到的彩虹卡。你的回應必須遵守以下原則：
+
+【1｜解讀原則】
+在回答每一張卡時，都需做到以下三點：
+(A) 卡片本身的語意：說明這張卡的核心訊息，例如色彩象徵、語句的中心意義、它可能指向的心理狀態或生命課題。
+(B) 與我的提問的關聯性：將此卡與我提出的問題連結，回答這張卡對我的問題提供了什麼方向？需要我注意、放下、或調整的點是什麼？
+(C) 行動指引（務必具體）：每一張卡請給我一個具體、可落實的行動建議，例如當下可採取的心態、人際互動的方式、需要避免的盲點、可立即練習的小行為。避免模糊、虛空、漂浮的建議。
+
+【2｜多張卡的排列解讀】
+若我抽了多張卡，請依照張數將它們解讀為：
+第一張｜核心主題（本質）
+第二張｜我要調整的內心狀態
+第三張｜行動方向或實踐方式
+第四張｜外部互動 / 人際提醒
+第五張｜最終整體建議或結果傾向
+每張需分開解讀，但最後要整合一次，給一段「五張卡的整體訊息」。
+
+【3｜風格要求】
+你的語氣需具備以下特質：
+溫柔、安慰人心、給予足夠的情緒價值，正向鼓勵但不討好。
+清晰、有邏輯、有結構。精準不攏統。
+避免預言式語氣，不要斷言未來。以覺察與行動為主，而非宿命或肯定句堆疊。
+
+【4｜示範格式】
+請每張卡用以下格式回應我：
+
+---
+第 X 張卡：〈卡片語句〉｜〈顏色〉
+
+1. 卡片核心訊息：
+（說明此卡本質在講什麼）
+
+2. 回答我的問題：
+（與我的提問連結，指出它在提醒我什麼）
+
+3. 行動建議：
+（具體、可執行、貼近生活的指引）
+---
+
+【6｜整體訊息（若有多張卡）】
+最後整理成兩至三句「整體訊息」，協助我看到大的方向。
+`;
 
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
 const WARM_PHRASES = [
@@ -385,110 +429,67 @@ const COLOR_MAP = {
   },
 };
 
-// --- HELPER: Rich AI Interpretation Generator (Returns JSX) ---
-const generateSimulatedInterpretation = (card, question, index, total) => {
-  const colorData = COLOR_MAP[card.color];
-  const q = question.trim() ? `「${question}」` : "目前的生命狀態";
+// --- HELPER: Rich AI Interpretation Generator (Returns JSX or String for Chat) ---
+// This function now uses the API if available, otherwise falls back to simulation
+const getAiInterpretation = async (cardCount, cards, question) => {
+  const cardContext = cards.map((c, i) => `第 ${i+1} 張卡：〈${c.text}〉｜顏色：${COLOR_MAP[c.color].name}`).join("\n");
   
-  if (total === 1 || index === 0) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-          <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
-            <Sparkles size={16} />
-            能量掃描與核心訊息
-          </h4>
-          <p className="text-purple-900/80 leading-relaxed">
-            這張卡片閃耀著 <span className={`font-bold ${colorData.text}`}>{colorData.name}</span> 的光芒，
-            象徵著「<span className="font-bold border-b-2 border-purple-200">{colorData.keyword}</span>」的能量。
-            <br className="my-2"/>
-            宇宙透過這張卡片對您說：
-            <br/>
-            <span className="font-medium text-lg italic text-purple-700 my-2 block">
-              「{card.text}」
-            </span>
-            這不僅是一句肯定語，更是一個溫柔的邀請。它顯示您當下的能量正渴望聚焦於 <span className="font-bold">{colorData.meaning.split('、')[0]}</span>。
-          </p>
-        </div>
-
-        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
-            <Bot size={16} />
-            深層覺察與連結
-          </h4>
-          <p className="text-blue-900/80 leading-relaxed">
-            針對<span className="font-medium">{q}</span>，這張卡片的出現絕非偶然。
-            <br/>
-            請試著回想，最近是否有些時刻，您忽略了 <span className="font-bold">{card.theme}</span>？
-            這張卡片像是一面鏡子，映照出您內心深處其實已經準備好去面對或改變的部分。
-            它提醒您，您擁有啟動 <span className="font-bold">{colorData.keyword}</span> 的能力。
-            不要急著尋找外在的答案，答案往往就在那份平靜的自我接納之中。
-          </p>
-        </div>
-
-        <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-          <h4 className="font-bold text-green-800 mb-2 flex items-center gap-2">
-            <Feather size={16} />
-            療癒行動與祝福
-          </h4>
-          <p className="text-green-900/80 leading-relaxed">
-            為了讓這份能量真正落地，建議您可以嘗試以下的小練習：
-            <br/>
-            <span className="block mt-2 font-medium bg-white/50 p-2 rounded-lg border border-green-200">
-              🌿 {colorData.action}
-            </span>
-            <br/>
-            請相信，每一個微小的行動，都在為您的生命編織新的實相。
-            祝福您，在{colorData.name}的光中找回屬於您的力量。
-          </p>
-        </div>
-      </div>
-    );
+  // Construct the full prompt based on user's instruction
+  let fullPrompt = "";
+  if (cardCount === 1) {
+    fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}`;
+  } else {
+    fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}\n\n請記得依照多張卡的排列解讀原則（1.核心 2.內在 3.行動 4.外部 5.整體）來分析。`;
   }
-  return null;
+
+  // Call API
+  return await callAiApi(fullPrompt);
 };
 
 // --- HELPER: Chat Response Logic (Real API + Simulation Fallback) ---
-const callAiApi = async (input, drawnCards) => {
+const callAiApi = async (message, context = "") => {
+  // If no backend URL is set, fall back to simple simulation (mostly for the chat part)
+  // For the initial interpretation, we really want the API. 
+  // If API fails or isn't set, we return a generic "Simulated" message to not break the app.
   if (!GOOGLE_SCRIPT_URL) {
-    return getSimulatedChatResponse(input, drawnCards); // Fallback to simulation
+    console.warn("No Google Script URL provided. Using fallback simulation.");
+    return "（模擬回應：請設定 Google Apps Script URL 以獲得 AI 解讀）\n\n這張牌卡代表著當下的能量。請深呼吸，感受它帶給您的訊息。";
   }
 
   try {
-    const cardContext = drawnCards.map(c => `卡片: ${c.text} (${c.color})`).join(", ");
-    
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
-      body: JSON.stringify({ message: input, context: cardContext }),
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // 'text/plain' avoids CORS preflight issues in simple requests
+      body: JSON.stringify({ message: message, context: context }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, 
     });
 
     const data = await response.json();
     if (data.result) return data.result;
     if (data.error) throw new Error(data.error);
-    return "抱歉，我現在有點累（連線錯誤），請稍後再試。";
+    return "抱歉，連線似乎出了點問題，請稍後再試。";
 
   } catch (error) {
     console.error("API Error:", error);
-    return getSimulatedChatResponse(input, drawnCards); // Fallback on error
+    return "抱歉，目前無法連接到 AI 服務。請檢查網路連線或稍後再試。";
   }
 };
 
 const getSimulatedChatResponse = (input, drawnCards) => {
   const userInput = input.toLowerCase();
   
-  if (userInput.includes("工作") || userInput.includes("職涯") || userInput.includes("事業")) {
-    return "關於工作，這張卡片提醒您回歸內在的價值。不論外在環境如何變動，試著問自己：『做什麼事情讓我感到最有熱情與價值？』那便是您的力量來源。";
-  } else if (userInput.includes("感情") || userInput.includes("愛") || userInput.includes("伴侶")) {
-    return "在感情關係中，這張卡片邀請您先從愛自己開始。當您的內在充滿愛與安全感時，外在的關係自然會流動起來。";
-  } else if (userInput.includes("迷惘") || userInput.includes("方向")) {
-    return "迷惘是靈魂正在重新對焦的過程。請不用急著找答案，試著每天花五分鐘安靜下來，答案會從寧靜中浮現。";
+  // Updated keywords for students/general life
+  if (userInput.includes("目標") || userInput.includes("計畫") || userInput.includes("未來") || userInput.includes("讀書") || userInput.includes("成績") || userInput.includes("表現")) {
+    return "關於您目前的生活目標或重心，這張卡片提醒您回歸內在的價值。不論外在成績或結果如何，試著問自己：『做什麼事情讓我感到最有熱情？』那便是您的力量來源。";
+  } else if (userInput.includes("朋友") || userInput.includes("同學") || userInput.includes("吵架") || userInput.includes("人際") || userInput.includes("孤單") || userInput.includes("相處")) {
+    return "在人際關係中，這張卡片邀請您先從愛自己開始。當您的內在充滿安全感時，與他人的互動自然會變得更自在真實，也能吸引到更和諧的頻率。";
+  } else if (userInput.includes("迷惘") || userInput.includes("不知道") || userInput.includes("煩") || userInput.includes("心情")) {
+    return "迷惘是成長過程中必經的濃霧，請不用急著找答案。試著每天花五分鐘安靜下來，允許自己處於『不知道』的狀態，答案往往會從那份寧靜中自然浮現。";
   } else if (userInput.includes("謝謝") || userInput.includes("感謝")) {
     return "不客氣，很高興能陪伴您。願彩虹的光與愛時刻與您同在。🌈";
-  } else if (userInput.includes("累") || userInput.includes("壓力")) {
-    return "辛苦了，您的身體正在發出訊號。請允許自己休息，這不是偷懶，而是為了走更長遠的路所需的充電。";
+  } else if (userInput.includes("累") || userInput.includes("壓力") || userInput.includes("休息") || userInput.includes("睡覺")) {
+    return "辛苦了，您的身心正在發出訊號。請允許自己這段時間稍微停下來休息，這不是偷懶，而是為了走更長遠的路所需的充電與修復。";
   }
-  return "我收到您的訊息了。請試著深呼吸，感受卡片帶給您的指引。您還有其他想探索的面向嗎？";
+  return "我收到您的訊息了。請試著深呼吸，感受卡片帶給您的指引。無論您現在處於什麼狀態，這張卡片都是宇宙給您當下最好的禮物。您還有其他想分享或探索的嗎？";
 };
 
 // --- COMPONENTS ---
@@ -602,30 +603,34 @@ const ChatInterface = ({ drawnCards }) => {
     setInput('');
     setIsTyping(true);
 
-    // Call API (or fallback simulation)
-    const responseText = await callAiApi(userMsg.content, drawnCards);
+    // Call API: Send user message along with card context
+    // The card context is passed to help the AI remember the context of the conversation
+    const cardContext = drawnCards.map(c => `[卡片:${c.text}(${c.color})]`).join("");
+    const responseText = await callAiApi(userMsg.content, `使用者已抽到的卡片：${cardContext}。請以此為基礎進行對話。`);
     
     setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
     setIsTyping(false);
   };
 
   return (
-    <div className="bg-yellow-50/50 rounded-2xl border border-yellow-200 overflow-hidden shadow-sm flex flex-col h-[400px]">
-      <div className="bg-yellow-100/80 p-3 border-b border-yellow-200 flex items-center gap-2">
-        <div className="bg-orange-100 p-1.5 rounded-full">
-          <Bot size={16} className="text-orange-500" />
+    <div className="bg-white border-2 border-orange-300 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[500px]">
+      {/* Header - Vivid Orange/Pink Gradient */}
+      <div className="bg-gradient-to-r from-orange-400 to-pink-500 p-4 flex items-center gap-3 shadow-md">
+        <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+          <Bot size={20} className="text-white" />
         </div>
-        <span className="font-bold text-gray-700 text-sm">心靈對話室</span>
+        <span className="font-bold text-white text-lg tracking-wide text-shadow-sm">心靈對話室</span>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages Area - Warm Background */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-orange-50/50">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`
-              max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
+              max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap
               ${msg.role === 'user' 
-                ? 'bg-orange-400 text-white rounded-tr-none' 
-                : 'bg-white text-gray-700 border border-gray-100 rounded-tl-none'}
+                ? 'bg-orange-500 text-white rounded-tr-none' 
+                : 'bg-white text-gray-700 border border-orange-100 rounded-tl-none'}
             `}>
               {msg.content}
             </div>
@@ -633,11 +638,11 @@ const ChatInterface = ({ drawnCards }) => {
         ))}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+            <div className="bg-white border border-orange-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
               <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                <div className="w-2 h-2 bg-orange-300 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-orange-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-orange-300 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
               </div>
             </div>
           </div>
@@ -645,21 +650,22 @@ const ChatInterface = ({ drawnCards }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 bg-white border-t border-gray-100 flex gap-2">
+      {/* Input Area */}
+      <div className="p-4 bg-white border-t border-orange-100 flex gap-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSend()}
           placeholder="輸入您的想法或疑問..."
-          className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 transition-all"
+          className="flex-1 bg-orange-50 border border-orange-200 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all placeholder:text-orange-300 text-gray-700"
         />
         <button 
           onClick={handleSend}
           disabled={!input.trim() || isTyping}
-          className="bg-orange-400 text-white p-2 rounded-full hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="bg-pink-500 text-white p-3 rounded-full hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex-shrink-0"
         >
-          <Send size={18} />
+          <Send size={20} />
         </button>
       </div>
     </div>
@@ -714,59 +720,13 @@ export default function App() {
       setIsAiLoading(true);
       setAiInterpretation(null);
       
-      const timer = setTimeout(() => {
-        if (drawnCards.length === 1) {
-          setAiInterpretation(generateSimulatedInterpretation(drawnCards[0], question, 0, 1));
-        } else {
-          // For 5 cards, generate a rich summary (JSX structure)
-          setAiInterpretation(
-            <div className="space-y-6">
-              <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
-                <h4 className="font-bold text-orange-800 mb-3 flex items-center gap-2">
-                  <Sparkles size={16} />
-                  五張牌陣深度解讀
-                </h4>
-                <p className="text-sm text-orange-700 mb-4">
-                  針對您提問的「<span className="font-bold">{question.trim() || "目前的生命狀態"}</span>」，
-                  以下是宇宙為您帶來的指引：
-                </p>
-                <div className="space-y-4">
-                  {drawnCards.map((card, idx) => {
-                    const positionName = ['核心本質', '內在調整', '行動方向', '外部提醒', '整體建議'][idx];
-                    const colorInfo = COLOR_MAP[card.color];
-                    return (
-                      <div key={idx} className="bg-white/60 p-3 rounded-lg text-sm">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                          {idx + 1}. {positionName}
-                        </span>
-                        <div className="font-medium text-gray-800 mb-1">〈{card.text}〉</div>
-                        <div className={`text-xs ${colorInfo.text}`}>
-                          這張{colorInfo.name}卡片提醒您關注 <span className="font-bold">{colorInfo.keyword}</span>。
-                          {colorInfo.action.split('，')[0]}。
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
-                  <Bot size={16} />
-                  綜合指引與祝福
-                </h4>
-                <p className="text-purple-900/80 leading-relaxed text-sm">
-                  請綜觀這五個面向的流動。您可能會發現某些顏色的能量正在重複出現，或者某個議題特別觸動您。
-                  那便是宇宙當下給您最重要的訊息。請帶著這些覺察回到生活中，相信您擁有足夠的智慧與力量去面對一切。
-                </p>
-              </div>
-            </div>
-          );
-        }
-        
+      const fetchAiResponse = async () => {
+        const interpretation = await getAiInterpretation(cardCount, drawnCards, question);
+        setAiInterpretation(interpretation);
         setIsAiLoading(false);
-      }, 1500); 
-      
-      return () => clearTimeout(timer);
+      };
+
+      fetchAiResponse();
     }
   }, [view, drawnCards, question]);
 
@@ -928,7 +888,7 @@ export default function App() {
         <textarea 
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="例如：面對目前工作的困境，我可以從什麼方向來調整心態？（若不填寫，則視為解讀當下整體狀態）"
+          placeholder="例如：生活中感到有些迷惘，或是跟朋友相處上有了摩擦...（沒寫也沒關係，讓彩虹卡給當下的你一點指引吧！）"
           className="w-full p-4 rounded-xl border border-rose-200 focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all outline-none resize-none h-24 bg-white/60 text-gray-700 placeholder:text-gray-400"
         />
         <div className="flex gap-2 text-xs text-rose-700 bg-white/50 p-3 rounded-lg font-medium">
@@ -1109,7 +1069,7 @@ export default function App() {
             
             <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2 relative z-10">
               <Sparkles size={20} className="text-purple-500" />
-              深度 AI 解讀
+              深層心靈指引
             </h3>
             
             {isAiLoading ? (
@@ -1118,7 +1078,7 @@ export default function App() {
                  <p className="text-sm text-gray-500 animate-pulse">AI 正在感受您的能量場並撰寫解讀中...</p>
               </div>
             ) : (
-              <div className="animate-fade-in relative z-10">
+              <div className="animate-fade-in relative z-10 whitespace-pre-wrap leading-relaxed text-gray-700">
                 {aiInterpretation}
               </div>
             )}
