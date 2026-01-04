@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 // --- CONFIG: Backend URL ---
-// 您提供的最新網址
+// ⚠️ 請確認這是否為您最新部署的 Web App URL (結尾必須是 /exec)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwFXKccZpD6SLIKZjjDXW39kTYx2sNGkYQ_Zb4Sx86zM1uIyZ-Jkx5N3MfMzMFWPEEC/exec"; 
 
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
@@ -304,6 +304,7 @@ const FULL_DECK = [
 ];
 
 // --- CONSTANTS: Color Mappings ---
+// 補回缺失的 COLOR_MAP 定義
 const COLOR_MAP = {
   red: { 
     name: '紅色', 
@@ -384,7 +385,7 @@ const COLOR_MAP = {
   },
 };
 
-// --- HELPER: API Logic (Communicates with GAS) ---
+// --- HELPER: API Logic ---
 const callAiApi = async (question, cardsContext, isChat = false) => {
   if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("您的部署ID")) {
     return "錯誤：請先在 App.jsx 中設定您的 Google Apps Script 網址！";
@@ -418,27 +419,34 @@ const callAiApi = async (question, cardsContext, isChat = false) => {
 
   } catch (error) {
     console.error("API Fetch Error:", error);
-    return `連線錯誤：無法連接到 Google Apps Script。\n可能原因：\n1. 跨網域 (CORS) 問題\n2. 網路連線中斷\n3. Apps Script 部署設定錯誤 (請確認已設定為 'Anyone')\n詳細錯誤：${error.message}`;
+    return `連線錯誤：無法連接到 Google Apps Script。\n可能原因：\n1. 跨網域 (CORS) 問題\n2. 網路連線中斷\n3. Apps Script 部署設定錯誤\n詳細錯誤：${error.message}`;
   }
 };
 
 const getAiInterpretation = async (cardCount, cards, question) => {
-  // Format cards data for the AI
   const cardContext = cards.map((c, i) => `第 ${i+1} 張卡：〈${c.text}〉｜顏色：${COLOR_MAP[c.color].name}`).join("\n");
-  
-  // Send simple structured data, let GAS handle the prompting
   return await callAiApi(question, cardContext, false);
 };
 
 // --- COMPONENTS ---
 
-// Custom component to display the AI response
-// It parses the raw text, removes Markdown symbols (# and *),
-// and groups the content into styled sections (Core, Answer, Action).
+// Missing Component Restored
+const BackgroundDecorations = () => (
+  <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div className="absolute top-[10%] left-[5%] text-yellow-200/40 animate-float-delay"><Star size={48} /></div>
+    <div className="absolute top-[20%] right-[10%] text-orange-200/30 animate-float"><Cloud size={64} /></div>
+    <div className="absolute bottom-[15%] left-[15%] text-rose-200/30 animate-float-delay"><Heart size={56} /></div>
+    <div className="absolute bottom-[25%] right-[5%] text-blue-200/30 animate-float"><Music size={40} /></div>
+    {/* Gradient blobs */}
+    <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-yellow-100/30 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-orange-100/30 rounded-full blur-3xl"></div>
+  </div>
+);
+
+// Enhanced AiResponseDisplay: Supports 5-card layout & specific styling
 const AiResponseDisplay = ({ text }) => {
   if (!text) return null;
 
-  // Pre-process: Split into segments based on headers/sections
   const lines = text.split('\n');
   const sections = [];
   let currentSection = { type: 'intro', content: [] };
@@ -448,28 +456,40 @@ const AiResponseDisplay = ({ text }) => {
     const cleanLine = line.replace(/[\#\*]/g, '').trim(); 
     if (!cleanLine) return;
 
-    // Detect section headers and switch section types
-    if (cleanLine.match(/第.+張卡/)) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
-      currentSection = { type: 'card_header', title: cleanLine, content: [] };
+    // Detect section headers
+    // Enhanced regex to capture title vs content if on same line (e.g. "第一張：內容")
+    const cardMatch = cleanLine.match(/^(這張卡|第[一二三四五\d]+張)/);
+    
+    if (cardMatch) {
+      // If previous section has stuff, push it
+      if (currentSection.content.length > 0 || currentSection.title) sections.push(currentSection);
+      
+      // Check if content is inline (contains colon)
+      const parts = cleanLine.split(/[:：]\s*(.*)/s); // Split by first colon
+      if (parts.length > 2) {
+         // Has inline content: parts[0] is Title, parts[1] is Content
+         currentSection = { type: 'card_header', title: parts[0], content: [parts[1]] };
+      } else {
+         // No inline content, just title
+         currentSection = { type: 'card_header', title: cleanLine, content: [] };
+      }
     } else if (cleanLine.includes('卡片核心訊息')) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
+      if (currentSection.content.length > 0 || currentSection.title) sections.push(currentSection);
       currentSection = { type: 'core', title: '卡片核心訊息', content: [] };
     } else if (cleanLine.includes('回答') && cleanLine.includes('問題')) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
+      if (currentSection.content.length > 0 || currentSection.title) sections.push(currentSection);
       currentSection = { type: 'answer', title: '回答你的問題', content: [] };
     } else if (cleanLine.includes('行動建議')) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
+      if (currentSection.content.length > 0 || currentSection.title) sections.push(currentSection);
       currentSection = { type: 'action', title: '行動建議', content: [] };
     } else if (cleanLine.includes('整體訊息') || cleanLine.includes('五張卡整體')) {
-       if (currentSection.content.length > 0) sections.push(currentSection);
+       if (currentSection.content.length > 0 || currentSection.title) sections.push(currentSection);
        currentSection = { type: 'summary', title: '整體指引', content: [] };
     } else {
-      // It's content for the current section
       currentSection.content.push(cleanLine);
     }
   });
-  if (currentSection.content.length > 0) sections.push(currentSection);
+  if (currentSection.content.length > 0 || currentSection.title) sections.push(currentSection);
 
   return (
     <div className="space-y-4">
@@ -478,33 +498,67 @@ const AiResponseDisplay = ({ text }) => {
 
         let styles = "";
         let icon = null;
+        let isCardHeader = false;
         
         switch(sec.type) {
           case 'card_header':
-            return (
-              <div key={idx} className="font-bold text-xl text-gray-800 mt-6 mb-2 border-b-2 border-orange-200 pb-1 flex items-center gap-2">
-                <Sparkles className="text-orange-400" size={20} />
-                {sec.title}
-              </div>
-            );
+            isCardHeader = true;
+            // Determine color based on index or title keywords
+            // Mapping: 1->Red, 2->Orange, 3->Yellow, 4->Green, 5->Blue/Purple
+            if (sec.title.includes('第一張')) {
+               styles = "bg-red-50/80 border-red-200 text-red-900";
+               icon = <div className="w-4 h-4 rounded-full bg-red-400 shrink-0" />;
+            } else if (sec.title.includes('第二張')) {
+               styles = "bg-orange-50/80 border-orange-200 text-orange-900";
+               icon = <div className="w-4 h-4 rounded-full bg-orange-400 shrink-0" />;
+            } else if (sec.title.includes('第三張')) {
+               styles = "bg-yellow-50/80 border-yellow-200 text-yellow-900";
+               icon = <div className="w-4 h-4 rounded-full bg-yellow-400 shrink-0" />;
+            } else if (sec.title.includes('第四張')) {
+               styles = "bg-green-50/80 border-green-200 text-green-900";
+               icon = <div className="w-4 h-4 rounded-full bg-green-400 shrink-0" />;
+            } else if (sec.title.includes('第五張')) {
+               styles = "bg-indigo-50/80 border-indigo-200 text-indigo-900";
+               icon = <div className="w-4 h-4 rounded-full bg-indigo-400 shrink-0" />;
+            } else {
+               // Default single card header style
+               styles = "bg-orange-50/50 border-orange-300 text-gray-800 border-l-4"; 
+               icon = <Sparkles className="text-orange-400" size={18} />;
+            }
+            break;
           case 'core':
-            styles = "bg-amber-50/80 border-amber-200 text-amber-900"; // Yellow/Orange for Core Message
+            styles = "bg-amber-50/80 border-amber-200 text-amber-900"; 
             icon = <Sun size={18} className="text-amber-500 shrink-0" />;
             break;
           case 'answer':
-            styles = "bg-sky-50/80 border-sky-200 text-sky-900"; // Blue for Answer
+            styles = "bg-sky-50/80 border-sky-200 text-sky-900"; 
             icon = <MessageCircle size={18} className="text-sky-500 shrink-0" />;
             break;
           case 'action':
-            styles = "bg-rose-50/80 border-rose-200 text-rose-900"; // Pink/Red for Action
+            styles = "bg-rose-50/80 border-rose-200 text-rose-900"; 
             icon = <Check size={18} className="text-rose-500 shrink-0" />;
             break;
           case 'summary':
-             styles = "bg-purple-50/80 border-purple-200 text-purple-900 mt-6"; // Purple for Summary
+             styles = "bg-purple-50/80 border-purple-200 text-purple-900 mt-6"; 
              icon = <Star size={18} className="text-purple-500 shrink-0" />;
              break;
           default:
             styles = "text-gray-700";
+        }
+
+        if (isCardHeader) {
+           return (
+              <div key={idx} className={`p-4 rounded-xl border ${styles} shadow-sm mt-4`}>
+                 <div className="font-bold text-lg flex items-center gap-2 mb-2">
+                    {icon} {sec.title}
+                 </div>
+                 {sec.content.length > 0 && (
+                   <div className="text-sm font-light leading-relaxed pl-6 opacity-90">
+                     {sec.content.map((line, i) => <p key={i} className="mb-1">{line}</p>)}
+                   </div>
+                 )}
+              </div>
+           )
         }
 
         return (
@@ -514,7 +568,7 @@ const AiResponseDisplay = ({ text }) => {
                  {icon} {sec.title}
                </div>
             )}
-            <div className="whitespace-pre-wrap">
+            <div className="whitespace-pre-wrap font-light">
               {sec.content.map((line, i) => <p key={i} className="mb-1">{line}</p>)}
             </div>
           </div>
@@ -702,35 +756,18 @@ const ChatInterface = ({ drawnCards }) => {
   );
 };
 
-// --- Background Decorations Component ---
-const BackgroundDecorations = () => (
-  <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-    <div className="absolute top-[10%] left-[5%] text-yellow-200/40 animate-float-delay"><Star size={48} /></div>
-    <div className="absolute top-[20%] right-[10%] text-orange-200/30 animate-float"><Cloud size={64} /></div>
-    <div className="absolute bottom-[15%] left-[15%] text-rose-200/30 animate-float-delay"><Heart size={56} /></div>
-    <div className="absolute bottom-[25%] right-[5%] text-blue-200/30 animate-float"><Music size={40} /></div>
-    {/* Gradient blobs */}
-    <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-yellow-100/30 rounded-full blur-3xl"></div>
-    <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-orange-100/30 rounded-full blur-3xl"></div>
-  </div>
-);
-
 export default function App() {
   const [view, setView] = useState('home'); 
   const [question, setQuestion] = useState('');
+  const [submittedQuestion, setSubmittedQuestion] = useState(''); // NEW STATE
   const [cardCount, setCardCount] = useState(1); 
   const [drawnCards, setDrawnCards] = useState([]);
   const [isFlipping, setIsFlipping] = useState(false);
   const [manualInputs, setManualInputs] = useState(Array(5).fill({ color: 'red', text: '' }));
   
-  // AI Interpretation State (JSX or String)
   const [aiInterpretation, setAiInterpretation] = useState(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
-
-  // Rotating Title State
   const [titleIndex, setTitleIndex] = useState(0);
-
-  // Zoomed Card State
   const [zoomedCard, setZoomedCard] = useState(null);
 
   useEffect(() => {
@@ -744,17 +781,16 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Generate Simulated AI Response
+  // AI Response Effect
   useEffect(() => {
     if (view === 'result' && drawnCards.length > 0) {
       setIsAiLoading(true);
       setAiInterpretation(null);
       
       const fetchAiResponse = async () => {
-        // Direct call to API, get string (interpretation or error)
-        const result = await getAiInterpretation(cardCount, drawnCards, question);
+        // Use submittedQuestion instead of current question state
+        const result = await getAiInterpretation(cardCount, drawnCards, submittedQuestion);
         
-        // Use the new AiResponseDisplay component to format the text
         setAiInterpretation(
              <AiResponseDisplay text={result} />
         );
@@ -764,11 +800,16 @@ export default function App() {
 
       fetchAiResponse();
     }
-  }, [view, drawnCards, question]);
+  }, [view, drawnCards]); // Removed 'question' from dependency, relying on view change + drawnCards
 
   // --- ACTIONS ---
 
   const handleDraw = () => {
+    // 1. Store question for API
+    setSubmittedQuestion(question);
+    // 2. Clear UI input immediately
+    setQuestion('');
+    
     setIsFlipping(true);
     const newCards = [];
     const deck = [...FULL_DECK]; 
@@ -786,6 +827,11 @@ export default function App() {
   };
 
   const handleManualSubmit = () => {
+    // 1. Store question for API
+    setSubmittedQuestion(question);
+    // 2. Clear UI input immediately
+    setQuestion('');
+
     const validInputs = manualInputs.slice(0, cardCount).map(input => ({
       ...input,
       theme: COLOR_MAP[input.color].meaning, 
@@ -1074,7 +1120,7 @@ export default function App() {
       {/* Interpretation Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Left Column - REMOVED Key Points Section, Expanded Interpretation */}
+        {/* Left Column */}
         <div className="md:col-span-2 space-y-8">
           
           {/* 1. Deep AI Interpretation */}
