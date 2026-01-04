@@ -24,52 +24,30 @@ import {
 } from 'lucide-react';
 
 // --- CONFIG: Backend URL ---
-// 已填入您提供的 GAS 網址
+// ⚠️ 請確認這是否為您最新部署的 Web App URL (結尾必須是 /exec)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi_I8ImQQW6zul-Y9kjsoF8KVf28acHiS6YAelkRec-cATSa0-SpGiWN5N-YbRDaubjQ/exec"; 
 
-// --- DATA: Expert System Prompt (內建專家指令) ---
+// --- DATA: Expert System Prompt (內建專家指令 - 優化版) ---
 const EXPERT_SYSTEM_PROMPT = `你現在是一位結合心理覺察、直覺閱讀、與清晰邏輯的彩虹卡解讀助手。
-你的任務是協助我解讀我抽到的彩虹卡。你的回應必須遵守以下原則：
+你的任務是協助我解讀我抽到的彩虹卡。
 
-【1｜解讀原則】
-在回答每一張卡時，都需做到以下三點：
-(A) 卡片本身的語意：說明這張卡的核心訊息，例如色彩象徵、語句的中心意義、它可能指向的心理狀態或生命課題。
-(B) 與我的提問的關聯性：將此卡與我提出的問題連結，回答這張卡對我的問題提供了什麼方向？需要我注意、放下、或調整的點是什麼？
-(C) 行動指引（務必具體）：每一張卡請給我一個具體、可落實的行動建議，例如當下可採取的心態、人際互動的方式、需要避免的盲點、可立即練習的小行為。避免模糊、虛空、漂浮的建議。
+【1. 解讀原則】
+(A) 卡片語意：說明這張卡的核心訊息、色彩象徵、語句意義，以及它指向的心理狀態。
+(B) 連結提問：將此卡與我的問題連結，指出這張卡提供了什麼方向？需要注意或調整的點是什麼？
+(C) 行動指引：給出一個具體、可落實的行動建議（例如心態轉念、具體行為、人際互動方式）。
 
-【2｜多張卡的排列解讀】
-若我抽了多張卡，請依照張數將它們解讀為：
-第一張｜核心主題（本質）
-第二張｜我要調整的內心狀態
-第三張｜行動方向或實踐方式
-第四張｜外部互動 / 人際提醒
-第五張｜最終整體建議或結果傾向
-每張需分開解讀，但最後要整合一次，給一段「五張卡的整體訊息」。
+【2. 多張卡排列規則】
+若有多張卡，請依序解讀：
+1. 核心主題（本質）
+2. 內在狀態調整
+3. 行動方向實踐
+4. 外部互動提醒
+5. 最終整體建議
+每張分開解讀，最後請給一段「五張卡的整體整合訊息」。
 
-【3｜風格要求】
-你的語氣需具備以下特質：
-溫柔、安慰人心、給予足夠的情緒價值，正向鼓勵但不討好。
-清晰、有邏輯、有結構。精準不攏統。
-避免預言式語氣，不要斷言未來。以覺察與行動為主，而非宿命或肯定句堆疊。
-
-【4｜示範格式】
-請每張卡用以下格式回應我：
-
----
-第 X 張卡：〈卡片語句〉｜〈顏色〉
-
-1. 卡片核心訊息：
-（說明此卡本質在講什麼）
-
-2. 回答我的問題：
-（與我的提問連結，指出它在提醒我什麼）
-
-3. 行動建議：
-（具體、可執行、貼近生活的指引）
----
-
-【6｜整體訊息（若有多張卡）】
-最後整理成兩至三句「整體訊息」，協助我看到大的方向。`;
+【3. 風格要求】
+語氣溫柔、安慰人心、給予情緒價值，正向鼓勵但不討好。
+邏輯清晰、結構分明。避免預言式語氣，以覺察與行動為主。`;
 
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
 const WARM_PHRASES = [
@@ -428,31 +406,35 @@ const COLOR_MAP = {
   },
 };
 
-// --- HELPER: API Logic (No Fallback) ---
+// --- HELPER: Chat Response Logic (Real API - No Fallback) ---
 const callAiApi = async (message, context = "") => {
   if (!GOOGLE_SCRIPT_URL) {
     return "錯誤：未設定 Google Apps Script URL。請確認程式碼中的設定。";
   }
 
   try {
+    // Debug log to console
+    console.log("Sending to AI:", { message, context });
+
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({ message: message, context: context }),
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      // IMPORTANT: Use application/json to match GAS doOptions expectations
+      headers: { "Content-Type": "application/json" },
     });
 
     if (!response.ok) {
-        return `錯誤：網路請求失敗 (Status: ${response.status})`;
+        throw new Error(`HTTP Error: ${response.status}`);
     }
 
     const data = await response.json();
     if (data.result) return data.result;
     if (data.error) return `AI 服務回傳錯誤：${data.error}`;
     
-    return "錯誤：無法從 AI 取得有效回應。";
+    return "錯誤：無法從 AI 取得有效回應 (Empty result)。";
 
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("API Fetch Error:", error);
     return `連線錯誤：無法連接到 Google Apps Script。\n可能原因：\n1. 跨網域 (CORS) 問題\n2. 網路連線中斷\n3. Apps Script 部署設定錯誤 (請確認已設定為 'Anyone')\n詳細錯誤：${error.message}`;
   }
 };
@@ -460,6 +442,7 @@ const callAiApi = async (message, context = "") => {
 const getAiInterpretation = async (cardCount, cards, question) => {
   const cardContext = cards.map((c, i) => `第 ${i+1} 張卡：〈${c.text}〉｜顏色：${COLOR_MAP[c.color].name}`).join("\n");
   
+  // Construct the full prompt based on user's instruction
   let fullPrompt = "";
   if (cardCount === 1) {
     fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}`;
