@@ -27,28 +27,6 @@ import {
 // ⚠️ 請確認這是否為您最新部署的 Web App URL (結尾必須是 /exec)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi_I8ImQQW6zul-Y9kjsoF8KVf28acHiS6YAelkRec-cATSa0-SpGiWN5N-YbRDaubjQ/exec"; 
 
-// --- DATA: Expert System Prompt (內建專家指令 - 優化版) ---
-const EXPERT_SYSTEM_PROMPT = `你現在是一位結合心理覺察、直覺閱讀、與清晰邏輯的彩虹卡解讀助手。
-你的任務是協助我解讀我抽到的彩虹卡。
-
-【1. 解讀原則】
-(A) 卡片語意：說明這張卡的核心訊息、色彩象徵、語句意義，以及它指向的心理狀態。
-(B) 連結提問：將此卡與我的問題連結，指出這張卡提供了什麼方向？需要注意或調整的點是什麼？
-(C) 行動指引：給出一個具體、可落實的行動建議（例如心態轉念、具體行為、人際互動方式）。
-
-【2. 多張卡排列規則】
-若有多張卡，請依序解讀：
-1. 核心主題（本質）
-2. 內在狀態調整
-3. 行動方向實踐
-4. 外部互動提醒
-5. 最終整體建議
-每張分開解讀，最後請給一段「五張卡的整體整合訊息」。
-
-【3. 風格要求】
-語氣溫柔、安慰人心、給予情緒價值，正向鼓勵但不討好。
-邏輯清晰、結構分明。避免預言式語氣，以覺察與行動為主。`;
-
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
 const WARM_PHRASES = [
   "給自己一份溫柔",
@@ -406,21 +384,26 @@ const COLOR_MAP = {
   },
 };
 
-// --- HELPER: Chat Response Logic (Real API - No Fallback) ---
-const callAiApi = async (message, context = "") => {
+// --- HELPER: API Logic (Communicates with GAS) ---
+const callAiApi = async (question, cardsContext, isChat = false) => {
   if (!GOOGLE_SCRIPT_URL) {
-    return "錯誤：未設定 Google Apps Script URL。請確認程式碼中的設定。";
+    return "錯誤：未設定 Google Apps Script URL。";
   }
 
   try {
-    // Debug log to console
-    console.log("Sending to AI:", { message, context });
+    const payload = {
+      question: question,
+      cards: cardsContext,
+      isChat: isChat
+    };
 
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
-      body: JSON.stringify({ message: message, context: context }),
-      // IMPORTANT: Use application/json to match GAS doOptions expectations
-      headers: { "Content-Type": "application/json" },
+      // IMPORTANT: Use standard JSON content type
+      body: JSON.stringify(payload),
+      // Use text/plain if CORS issues persist with application/json, 
+      // but standard is application/json. GAS doOptions handles preflight.
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, 
     });
 
     if (!response.ok) {
@@ -431,7 +414,7 @@ const callAiApi = async (message, context = "") => {
     if (data.result) return data.result;
     if (data.error) return `AI 服務回傳錯誤：${data.error}`;
     
-    return "錯誤：無法從 AI 取得有效回應 (Empty result)。";
+    return "錯誤：無法從 AI 取得有效回應。";
 
   } catch (error) {
     console.error("API Fetch Error:", error);
@@ -440,18 +423,11 @@ const callAiApi = async (message, context = "") => {
 };
 
 const getAiInterpretation = async (cardCount, cards, question) => {
+  // Format cards data for the AI
   const cardContext = cards.map((c, i) => `第 ${i+1} 張卡：〈${c.text}〉｜顏色：${COLOR_MAP[c.color].name}`).join("\n");
   
-  // Construct the full prompt based on user's instruction
-  let fullPrompt = "";
-  if (cardCount === 1) {
-    fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}`;
-  } else {
-    fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}\n\n請記得依照多張卡的排列解讀原則（1.核心 2.內在 3.行動 4.外部 5.整體）來分析。`;
-  }
-
-  // Call API directly, no fallback
-  return await callAiApi(fullPrompt);
+  // Send simple structured data, let GAS handle the prompting
+  return await callAiApi(question, cardContext, false);
 };
 
 // --- COMPONENTS ---
@@ -566,8 +542,8 @@ const ChatInterface = ({ drawnCards }) => {
     setIsTyping(true);
 
     const cardContext = drawnCards.map(c => `[卡片:${c.text}(${c.color})]`).join("");
-    // Direct call, responseText will contain error message if failed
-    const responseText = await callAiApi(userMsg.content, `使用者已抽到的卡片：${cardContext}。請以此為基礎進行對話。`);
+    // Call API with isChat=true
+    const responseText = await callAiApi(userMsg.content, cardContext, true);
     
     setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
     setIsTyping(false);
