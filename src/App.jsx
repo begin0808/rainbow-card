@@ -24,10 +24,10 @@ import {
 } from 'lucide-react';
 
 // --- CONFIG: Backend URL ---
-// ⚠️ 請將您的 Google Apps Script 網址貼在下方引號中
+// 已填入您提供的 GAS 網址
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi_I8ImQQW6zul-Y9kjsoF8KVf28acHiS6YAelkRec-cATSa0-SpGiWN5N-YbRDaubjQ/exec"; 
 
-// --- DATA: Expert System Prompt (內建指令) ---
+// --- DATA: Expert System Prompt (內建專家指令) ---
 const EXPERT_SYSTEM_PROMPT = `你現在是一位結合心理覺察、直覺閱讀、與清晰邏輯的彩虹卡解讀助手。
 你的任務是協助我解讀我抽到的彩虹卡。你的回應必須遵守以下原則：
 
@@ -69,8 +69,7 @@ const EXPERT_SYSTEM_PROMPT = `你現在是一位結合心理覺察、直覺閱�
 ---
 
 【6｜整體訊息（若有多張卡）】
-最後整理成兩至三句「整體訊息」，協助我看到大的方向。
-`;
+最後整理成兩至三句「整體訊息」，協助我看到大的方向。`;
 
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
 const WARM_PHRASES = [
@@ -1065,13 +1064,13 @@ export default function App() {
                  <p className="text-sm text-gray-500 animate-pulse">AI 正在感受您的能量場並撰寫解讀中...</p>
               </div>
             ) : (
-              <div className="animate-fade-in relative z-10">
+              <div className="animate-fade-in relative z-10 whitespace-pre-wrap leading-relaxed text-gray-700">
                 {aiInterpretation}
               </div>
             )}
           </div>
 
-          {/* 3. Chat Interface (Now uses real API with no simulation) */}
+          {/* 3. Chat Interface */}
           <ChatInterface drawnCards={drawnCards} />
         </div>
 
