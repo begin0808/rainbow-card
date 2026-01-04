@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 
 // --- CONFIG: Backend URL ---
-// 您提供的最新網址
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwFXKccZpD6SLIKZjjDXW39kTYx2sNGkYQ_Zb4Sx86zM1uIyZ-Jkx5N3MfMzMFWPEEC/exec"; 
+// ⚠️ 請確認這是否為您最新部署的 Web App URL (結尾必須是 /exec)
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi_I8ImQQW6zul-Y9kjsoF8KVf28acHiS6YAelkRec-cATSa0-SpGiWN5N-YbRDaubjQ/exec"; 
 
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
 const WARM_PHRASES = [
@@ -386,8 +386,8 @@ const COLOR_MAP = {
 
 // --- HELPER: API Logic (Communicates with GAS) ---
 const callAiApi = async (question, cardsContext, isChat = false) => {
-  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("您的部署ID")) {
-    return "錯誤：請先在 App.jsx 中設定您的 Google Apps Script 網址！";
+  if (!GOOGLE_SCRIPT_URL) {
+    return "錯誤：未設定 Google Apps Script URL。";
   }
 
   try {
@@ -431,98 +431,6 @@ const getAiInterpretation = async (cardCount, cards, question) => {
 };
 
 // --- COMPONENTS ---
-
-// Custom component to display the AI response
-// It parses the raw text, removes Markdown symbols (# and *),
-// and groups the content into styled sections (Core, Answer, Action).
-const AiResponseDisplay = ({ text }) => {
-  if (!text) return null;
-
-  // Pre-process: Split into segments based on headers/sections
-  const lines = text.split('\n');
-  const sections = [];
-  let currentSection = { type: 'intro', content: [] };
-
-  lines.forEach(line => {
-    // Remove Markdown symbols # and *
-    const cleanLine = line.replace(/[\#\*]/g, '').trim(); 
-    if (!cleanLine) return;
-
-    // Detect section headers and switch section types
-    if (cleanLine.match(/第.+張卡/)) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
-      currentSection = { type: 'card_header', title: cleanLine, content: [] };
-    } else if (cleanLine.includes('卡片核心訊息')) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
-      currentSection = { type: 'core', title: '卡片核心訊息', content: [] };
-    } else if (cleanLine.includes('回答') && cleanLine.includes('問題')) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
-      currentSection = { type: 'answer', title: '回答你的問題', content: [] };
-    } else if (cleanLine.includes('行動建議')) {
-      if (currentSection.content.length > 0) sections.push(currentSection);
-      currentSection = { type: 'action', title: '行動建議', content: [] };
-    } else if (cleanLine.includes('整體訊息') || cleanLine.includes('五張卡整體')) {
-       if (currentSection.content.length > 0) sections.push(currentSection);
-       currentSection = { type: 'summary', title: '整體指引', content: [] };
-    } else {
-      // It's content for the current section
-      currentSection.content.push(cleanLine);
-    }
-  });
-  if (currentSection.content.length > 0) sections.push(currentSection);
-
-  return (
-    <div className="space-y-4">
-      {sections.map((sec, idx) => {
-        if (sec.type === 'intro' && sec.content.length === 0) return null;
-
-        let styles = "";
-        let icon = null;
-        
-        switch(sec.type) {
-          case 'card_header':
-            return (
-              <div key={idx} className="font-bold text-xl text-gray-800 mt-6 mb-2 border-b-2 border-orange-200 pb-1 flex items-center gap-2">
-                <Sparkles className="text-orange-400" size={20} />
-                {sec.title}
-              </div>
-            );
-          case 'core':
-            styles = "bg-amber-50/80 border-amber-200 text-amber-900"; // Yellow/Orange for Core Message
-            icon = <Sun size={18} className="text-amber-500 shrink-0" />;
-            break;
-          case 'answer':
-            styles = "bg-sky-50/80 border-sky-200 text-sky-900"; // Blue for Answer
-            icon = <MessageCircle size={18} className="text-sky-500 shrink-0" />;
-            break;
-          case 'action':
-            styles = "bg-rose-50/80 border-rose-200 text-rose-900"; // Pink/Red for Action
-            icon = <Check size={18} className="text-rose-500 shrink-0" />;
-            break;
-          case 'summary':
-             styles = "bg-purple-50/80 border-purple-200 text-purple-900 mt-6"; // Purple for Summary
-             icon = <Star size={18} className="text-purple-500 shrink-0" />;
-             break;
-          default:
-            styles = "text-gray-700";
-        }
-
-        return (
-          <div key={idx} className={`p-4 rounded-xl border ${styles} text-sm md:text-base leading-relaxed shadow-sm`}>
-            {sec.title && sec.type !== 'intro' && (
-               <div className="font-bold mb-2 flex items-center gap-2 opacity-90">
-                 {icon} {sec.title}
-               </div>
-            )}
-            <div className="whitespace-pre-wrap">
-              {sec.content.map((line, i) => <p key={i} className="mb-1">{line}</p>)}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoomed = false }) => {
   const colorData = COLOR_MAP[color] || COLOR_MAP.red;
@@ -754,9 +662,11 @@ export default function App() {
         // Direct call to API, get string (interpretation or error)
         const result = await getAiInterpretation(cardCount, drawnCards, question);
         
-        // Use the new AiResponseDisplay component to format the text
+        // Wrap text in a nice container for display
         setAiInterpretation(
-             <AiResponseDisplay text={result} />
+             <div className="animate-fade-in relative z-10 whitespace-pre-wrap leading-relaxed text-gray-700 bg-white/60 p-6 rounded-xl border border-purple-100 shadow-sm">
+                {result}
+             </div>
         );
 
         setIsAiLoading(false);
@@ -1074,17 +984,38 @@ export default function App() {
       {/* Interpretation Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Left Column - REMOVED Key Points Section, Expanded Interpretation */}
+        {/* Left Column */}
         <div className="md:col-span-2 space-y-8">
           
-          {/* 1. Deep AI Interpretation */}
+          {/* 1. Static Key Points */}
+          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-orange-100">
+            <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+              <Feather size={20} className="text-orange-400" />
+              卡片指引重點
+            </h3>
+            <div className="space-y-6">
+              {drawnCards.map((card, idx) => (
+                <div key={card.id} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">Card {idx + 1}</span>
+                    <span className={`text-sm font-bold ${COLOR_MAP[card.color].text}`}>
+                      {COLOR_MAP[card.color].meaning.split('、')[0]}能量
+                    </span>
+                  </div>
+                  <p className="text-gray-700 font-medium mb-1">{card.text}</p>
+                  {card.textEn && <p className="text-gray-400 text-sm font-serif italic mb-1">{card.textEn}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. Deep AI Interpretation */}
           <div className="bg-gradient-to-br from-white to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-200 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10 text-orange-400"><Bot size={64}/></div>
             
-            {/* Title modified here */}
             <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2 relative z-10">
               <Sparkles size={20} className="text-purple-500" />
-              專屬你的彩虹指引
+              深層心靈指引
             </h3>
             
             {isAiLoading ? (
@@ -1099,7 +1030,7 @@ export default function App() {
             )}
           </div>
 
-          {/* 2. Chat Interface */}
+          {/* 3. Chat Interface */}
           <ChatInterface drawnCards={drawnCards} />
         </div>
 
