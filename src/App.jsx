@@ -304,7 +304,6 @@ const FULL_DECK = [
 ];
 
 // --- CONSTANTS: Color Mappings ---
-// 補回缺失的 COLOR_MAP 定義
 const COLOR_MAP = {
   red: { 
     name: '紅色', 
@@ -774,6 +773,11 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [view]);
 
+  // Set document title
+  useEffect(() => {
+    document.title = "彩虹卡療癒所";
+  }, []);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTitleIndex((prev) => (prev + 1) % WARM_PHRASES.length);
@@ -1102,7 +1106,7 @@ export default function App() {
         </button>
         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
           <Sun className="text-orange-400" size={20} />
-          你的彩虹卡解讀
+          彩虹卡療癒所
         </h2>
         <div className="w-24"></div> 
       </div>
