@@ -41,88 +41,6 @@ const WARM_PHRASES = [
   "今天也要好好照顧自己"
 ];
 
-// --- CONSTANTS: Color Mappings ---
-// Moved COLOR_MAP up so it is defined before use
-const COLOR_MAP = {
-  red: { 
-    name: '紅色', 
-    bg: 'bg-red-500', 
-    light: 'bg-red-50', 
-    border: 'border-red-200',
-    text: 'text-red-700',
-    meaning: '安全感、金錢、身體、生活穩定度',
-    action: '試著赤腳踩在草地或土地上，感受大地之母的支持；或者整理一下錢包，對每一筆金錢表達感謝。',
-    keyword: '紮根與生存',
-    desc: '紅色代表海底輪，是生命的根基。它關乎我們的生存本能、安全感以及與物質世界的連結。'
-  },
-  orange: { 
-    name: '橘色', 
-    bg: 'bg-orange-500', 
-    light: 'bg-orange-50', 
-    border: 'border-orange-200', 
-    text: 'text-orange-700',
-    meaning: '玩樂、創造力、內在小孩、享受生命',
-    action: '做一件單純為了好玩而做的事，吃一頓美味的餐點，或者隨意地跳一支舞，讓身體動起來。',
-    keyword: '情感與創造',
-    desc: '橘色代表臍輪，掌管我們的情緒、創造力與感官享受。它是內在小孩的居所，也是喜悅的源泉。'
-  },
-  yellow: { 
-    name: '黃色', 
-    bg: 'bg-yellow-400', 
-    light: 'bg-yellow-50', 
-    border: 'border-yellow-200', 
-    text: 'text-yellow-700',
-    meaning: '自我價值、自信、界線、選擇與決定',
-    action: '練習對不想做的事情說「不」，或者在鏡子前對自己說三次：「我有力量創造我想要的生活。」',
-    keyword: '力量與自信',
-    desc: '黃色代表太陽神經叢，是個人的力量中心。它影響著我們的意志力、自信心以及自我價值感。'
-  },
-  green: { 
-    name: '綠色', 
-    bg: 'bg-green-500', 
-    light: 'bg-green-50', 
-    border: 'border-green-200', 
-    text: 'text-green-700',
-    meaning: '愛與關係、親密、寬恕、自我接納',
-    action: '做幾次深呼吸，想像綠色的光充滿心輪；或者給你愛的人（或自己）一個大大的擁抱。',
-    keyword: '愛與慈悲',
-    desc: '綠色代表心輪，是愛與慈悲的中心。它連結了物質與靈性，教導我們如何去愛、寬恕與接納。'
-  },
-  blue: { 
-    name: '藍色', 
-    bg: 'bg-sky-400', 
-    light: 'bg-sky-50', 
-    border: 'border-sky-200', 
-    text: 'text-sky-700',
-    meaning: '溝通表達、說話方式、專注與活在當下',
-    action: '唱一首歌，寫一篇自由書寫的日記，或者單純地安靜五分鐘，觀察自己的呼吸。',
-    keyword: '表達與真實',
-    desc: '藍色代表喉輪，掌管溝通與自我表達。它鼓勵我們說出內在的真理，並真實地活出自己。'
-  },
-  indigo: { 
-    name: '靛色', 
-    bg: 'bg-indigo-600', 
-    light: 'bg-indigo-50', 
-    border: 'border-indigo-200', 
-    text: 'text-indigo-700',
-    meaning: '思考模式、內在對話、信念、看事情的眼光',
-    action: '記錄下昨晚的夢境，或者閉上眼睛，想像眉心輪有一道靛藍色的光，信任你的第一個直覺。',
-    keyword: '洞見與直覺',
-    desc: '靛色代表眉心輪（第三眼），與直覺、洞察力及想像力有關。它幫助我們看清事物的本質。'
-  },
-  violet: { 
-    name: '紫色', 
-    bg: 'bg-purple-500', 
-    light: 'bg-purple-50', 
-    border: 'border-purple-200', 
-    text: 'text-purple-700',
-    meaning: '直覺、信任、生命使命、與更大的力量連結',
-    action: '進行一段簡短的冥想，感受頭頂與宇宙的連結，並在心中默唸：「我信任生命的安排。」',
-    keyword: '靈性與合一',
-    desc: '紫色代表頂輪，是我們與宇宙神性智慧連結的通道。它帶來靈性的覺醒、合一與深層的平靜。'
-  },
-};
-
 // --- DATA: Complete Rainbow Card Database (245 Cards) ---
 const FULL_DECK = [
   // RED (Root Chakra)
@@ -385,6 +303,87 @@ const FULL_DECK = [
   { color: 'violet', text: '我是被祝福的，我也祝福他人。', textEn: 'I am blessed, and I bless others.', theme: '祝福他人' },
 ];
 
+// --- CONSTANTS: Color Mappings ---
+const COLOR_MAP = {
+  red: { 
+    name: '紅色', 
+    bg: 'bg-red-500', 
+    light: 'bg-red-50', 
+    border: 'border-red-200', 
+    text: 'text-red-700',
+    meaning: '安全感、金錢、身體、生活穩定度',
+    action: '試著赤腳踩在草地或土地上，感受大地之母的支持；或者整理一下錢包，對每一筆金錢表達感謝。',
+    keyword: '紮根與生存',
+    desc: '紅色代表海底輪，是生命的根基。它關乎我們的生存本能、安全感以及與物質世界的連結。'
+  },
+  orange: { 
+    name: '橘色', 
+    bg: 'bg-orange-500', 
+    light: 'bg-orange-50', 
+    border: 'border-orange-200', 
+    text: 'text-orange-700',
+    meaning: '玩樂、創造力、內在小孩、享受生命',
+    action: '做一件單純為了好玩而做的事，吃一頓美味的餐點，或者隨意地跳一支舞，讓身體動起來。',
+    keyword: '情感與創造',
+    desc: '橘色代表臍輪，掌管我們的情緒、創造力與感官享受。它是內在小孩的居所，也是喜悅的源泉。'
+  },
+  yellow: { 
+    name: '黃色', 
+    bg: 'bg-yellow-400', 
+    light: 'bg-yellow-50', 
+    border: 'border-yellow-200', 
+    text: 'text-yellow-700',
+    meaning: '自我價值、自信、界線、選擇與決定',
+    action: '練習對不想做的事情說「不」，或者在鏡子前對自己說三次：「我有力量創造我想要的生活。」',
+    keyword: '力量與自信',
+    desc: '黃色代表太陽神經叢，是個人的力量中心。它影響著我們的意志力、自信心以及自我價值感。'
+  },
+  green: { 
+    name: '綠色', 
+    bg: 'bg-green-500', 
+    light: 'bg-green-50', 
+    border: 'border-green-200', 
+    text: 'text-green-700',
+    meaning: '愛與關係、親密、寬恕、自我接納',
+    action: '做幾次深呼吸，想像綠色的光充滿心輪；或者給你愛的人（或自己）一個大大的擁抱。',
+    keyword: '愛與慈悲',
+    desc: '綠色代表心輪，是愛與慈悲的中心。它連結了物質與靈性，教導我們如何去愛、寬恕與接納。'
+  },
+  blue: { 
+    name: '藍色', 
+    bg: 'bg-sky-400', 
+    light: 'bg-sky-50', 
+    border: 'border-sky-200', 
+    text: 'text-sky-700',
+    meaning: '溝通表達、說話方式、專注與活在當下',
+    action: '唱一首歌，寫一篇自由書寫的日記，或者單純地安靜五分鐘，觀察自己的呼吸。',
+    keyword: '表達與真實',
+    desc: '藍色代表喉輪，掌管溝通與自我表達。它鼓勵我們說出內在的真理，並真實地活出自己。'
+  },
+  indigo: { 
+    name: '靛色', 
+    bg: 'bg-indigo-600', 
+    light: 'bg-indigo-50', 
+    border: 'border-indigo-200', 
+    text: 'text-indigo-700',
+    meaning: '思考模式、內在對話、信念、看事情的眼光',
+    action: '記錄下昨晚的夢境，或者閉上眼睛，想像眉心輪有一道靛藍色的光，信任你的第一個直覺。',
+    keyword: '洞見與直覺',
+    desc: '靛色代表眉心輪（第三眼），與直覺、洞察力及想像力有關。它幫助我們看清事物的本質。'
+  },
+  violet: { 
+    name: '紫色', 
+    bg: 'bg-purple-500', 
+    light: 'bg-purple-50', 
+    border: 'border-purple-200', 
+    text: 'text-purple-700',
+    meaning: '直覺、信任、生命使命、與更大的力量連結',
+    action: '進行一段簡短的冥想，感受頭頂與宇宙的連結，並在心中默唸：「我信任生命的安排。」',
+    keyword: '靈性與合一',
+    desc: '紫色代表頂輪，是我們與宇宙神性智慧連結的通道。它帶來靈性的覺醒、合一與深層的平靜。'
+  },
+};
+
 // --- HELPER: API Logic (Communicates with GAS) ---
 const callAiApi = async (question, cardsContext, isChat = false) => {
   if (!GOOGLE_SCRIPT_URL) {
@@ -398,9 +397,11 @@ const callAiApi = async (question, cardsContext, isChat = false) => {
       isChat: isChat
     };
 
+    console.log("Sending to AI:", payload);
+
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
-      // Change to text/plain to avoid CORS preflight options request which GAS handles poorly
+      // IMPORTANT: Use text/plain to avoid CORS preflight options request
       body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain;charset=utf-8" },
     });
@@ -413,7 +414,7 @@ const callAiApi = async (question, cardsContext, isChat = false) => {
     if (data.result) return data.result;
     if (data.error) return `AI 服務回傳錯誤：${data.error}`;
     
-    return "錯誤：無法從 AI 取得有效回應。";
+    return "錯誤：無法從 AI 取得有效回應 (Empty result)。";
 
   } catch (error) {
     console.error("API Fetch Error:", error);
@@ -436,7 +437,7 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
   
   // Dynamic styles based on size and zoom state
   const containerClass = isZoomed
-    ? 'w-full max-w-sm aspect-[2/3] max-h-[80vh]' // Constrain height strictly
+    ? 'w-full max-w-sm aspect-[2/3] max-h-[80vh]' 
     : size === 'small' 
       ? 'w-24 h-36 md:hover:scale-[1.2] md:hover:z-10 transition-transform duration-300 origin-center'
       : 'w-64 h-96';
@@ -453,7 +454,6 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
       onClick={onClick}
       style={{ perspective: '1000px', transformStyle: 'preserve-3d' }}
     >
-      {/* Front of Card (The Color & Text) */}
       <div className={`
         absolute w-full h-full backface-hidden rounded-xl shadow-xl 
         flex flex-col items-center justify-center text-center
@@ -461,11 +461,9 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
         overflow-y-auto hide-scrollbar
         ${size === 'small' && !isZoomed ? 'p-2' : 'p-8'}
       `}>
-        {/* Decorations */}
         <div className={`absolute top-4 left-4 opacity-50 ${size === 'small' && !isZoomed ? 'scale-50 top-2 left-2' : ''}`}><Sparkles size={20} /></div>
         <div className={`absolute bottom-4 right-4 opacity-50 ${size === 'small' && !isZoomed ? 'scale-50 bottom-2 right-2' : ''}`}><Heart size={20} /></div>
         
-        {/* Chinese Text */}
         <p className={`drop-shadow-md mb-4 font-bold ${
           isZoomed ? 'text-2xl leading-relaxed' : 
           size === 'small' ? 'text-[10px] leading-tight mb-1' : 'text-xl leading-relaxed'
@@ -473,7 +471,6 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
           {text}
         </p>
         
-        {/* English Text */}
         {textEn && (
           <p className={`drop-shadow-sm font-serif italic opacity-90 ${
             isZoomed ? 'text-lg mt-2' :
@@ -483,7 +480,6 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
           </p>
         )}
 
-        {/* Rainbow Label */}
         <p className={`absolute ${
           size === 'small' && !isZoomed ? 'bottom-2 text-[6px]' : 'bottom-6 text-xs'
         } opacity-60 font-light tracking-widest uppercase`}>
@@ -491,7 +487,6 @@ const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoom
         </p>
       </div>
 
-      {/* Back of Card (The Pattern) */}
       <div className={`
         absolute w-full h-full backface-hidden rounded-xl shadow-lg 
         bg-white border-4 border-white
@@ -1029,13 +1024,13 @@ export default function App() {
                  <p className="text-sm text-gray-500 animate-pulse">AI 正在感受您的能量場並撰寫解讀中...</p>
               </div>
             ) : (
-              <div className="animate-fade-in relative z-10">
+              <div className="animate-fade-in relative z-10 whitespace-pre-wrap leading-relaxed text-gray-700">
                 {aiInterpretation}
               </div>
             )}
           </div>
 
-          {/* 3. Simulated Chat Interface (New) */}
+          {/* 3. Chat Interface */}
           <ChatInterface drawnCards={drawnCards} />
         </div>
 
