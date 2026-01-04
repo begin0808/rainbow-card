@@ -429,12 +429,38 @@ const COLOR_MAP = {
   },
 };
 
-// --- HELPER: Rich AI Interpretation Generator (Returns JSX or String for Chat) ---
-// This function now uses the API if available, otherwise falls back to simulation
+// --- HELPER: API Logic (No Fallback) ---
+const callAiApi = async (message, context = "") => {
+  if (!GOOGLE_SCRIPT_URL) {
+    return "錯誤：未設定 Google Apps Script URL。請確認程式碼中的設定。";
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ message: message, context: context }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+    });
+
+    if (!response.ok) {
+        return `錯誤：網路請求失敗 (Status: ${response.status})`;
+    }
+
+    const data = await response.json();
+    if (data.result) return data.result;
+    if (data.error) return `AI 服務回傳錯誤：${data.error}`;
+    
+    return "錯誤：無法從 AI 取得有效回應。";
+
+  } catch (error) {
+    console.error("API Error:", error);
+    return `連線錯誤：無法連接到 Google Apps Script。\n可能原因：\n1. 跨網域 (CORS) 問題\n2. 網路連線中斷\n3. Apps Script 部署設定錯誤 (請確認已設定為 'Anyone')\n詳細錯誤：${error.message}`;
+  }
+};
+
 const getAiInterpretation = async (cardCount, cards, question) => {
   const cardContext = cards.map((c, i) => `第 ${i+1} 張卡：〈${c.text}〉｜顏色：${COLOR_MAP[c.color].name}`).join("\n");
   
-  // Construct the full prompt based on user's instruction
   let fullPrompt = "";
   if (cardCount === 1) {
     fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}`;
@@ -442,166 +468,8 @@ const getAiInterpretation = async (cardCount, cards, question) => {
     fullPrompt = `${EXPERT_SYSTEM_PROMPT}\n\n【我的提問】：${question || "（我當下沒有特定問題，請幫我解讀目前的生命狀態）"}\n\n【我抽到的卡片】：\n${cardContext}\n\n請記得依照多張卡的排列解讀原則（1.核心 2.內在 3.行動 4.外部 5.整體）來分析。`;
   }
 
-  // Call API
-  const apiResult = await callAiApi(fullPrompt);
-  
-  // If API returned null (failure), use fallback
-  if (apiResult === null) {
-    return generateFallbackInterpretation(cardCount, cards, question);
-  }
-
-  return apiResult;
-};
-
-// --- HELPER: Chat Response Logic (Real API + Simulation Fallback) ---
-const callAiApi = async (message, context = "") => {
-  if (!GOOGLE_SCRIPT_URL) {
-    console.warn("No Google Script URL provided. Returning null for fallback.");
-    return null; // Return null to signal fallback
-  }
-
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ message: message, context: context }),
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-    });
-
-    const data = await response.json();
-    if (data.result) return data.result;
-    if (data.error) throw new Error(data.error);
-    return null; // Return null on error structure
-
-  } catch (error) {
-    console.error("API Error:", error);
-    return null; // Return null on network error
-  }
-};
-
-const getSimulatedChatResponse = (input, drawnCards) => {
-  const userInput = input.toLowerCase();
-  
-  // Updated keywords for students/general life
-  if (userInput.includes("目標") || userInput.includes("計畫") || userInput.includes("未來") || userInput.includes("讀書") || userInput.includes("成績") || userInput.includes("表現")) {
-    return "關於您目前的生活目標或重心，這張卡片提醒您回歸內在的價值。不論外在成績或結果如何，試著問自己：『做什麼事情讓我感到最有熱情？』那便是您的力量來源。";
-  } else if (userInput.includes("朋友") || userInput.includes("同學") || userInput.includes("吵架") || userInput.includes("人際") || userInput.includes("孤單") || userInput.includes("相處")) {
-    return "在人際關係中，這張卡片邀請您先從愛自己開始。當您的內在充滿安全感時，與他人的互動自然會變得更自在真實，也能吸引到更和諧的頻率。";
-  } else if (userInput.includes("迷惘") || userInput.includes("不知道") || userInput.includes("煩") || userInput.includes("心情")) {
-    return "迷惘是成長過程中必經的濃霧，請不用急著找答案。試著每天花五分鐘安靜下來，允許自己處於『不知道』的狀態，答案往往會從那份寧靜中自然浮現。";
-  } else if (userInput.includes("謝謝") || userInput.includes("感謝")) {
-    return "不客氣，很高興能陪伴您。願彩虹的光與愛時刻與您同在。🌈";
-  } else if (userInput.includes("累") || userInput.includes("壓力") || userInput.includes("休息") || userInput.includes("睡覺")) {
-    return "辛苦了，您的身心正在發出訊號。請允許自己這段時間稍微停下來休息，這不是偷懶，而是為了走更長遠的路所需的充電與修復。";
-  }
-  return "我收到您的訊息了。請試著深呼吸，感受卡片帶給您的指引。無論您現在處於什麼狀態，這張卡片都是宇宙給您當下最好的禮物。您還有其他想分享或探索的嗎？";
-};
-
-// --- HELPER: Fallback JSX Generator (Renamed from generateSimulatedInterpretation) ---
-const generateFallbackInterpretation = (cardCount, cards, question) => {
-  const q = question.trim() ? `「${question}」` : "目前的生命狀態";
-  
-  if (cardCount === 1) {
-    const card = cards[0];
-    const colorData = COLOR_MAP[card.color];
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-          <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
-            <Sparkles size={16} />
-            能量掃描與核心訊息
-          </h4>
-          <p className="text-purple-900/80 leading-relaxed">
-            這張卡片閃耀著 <span className={`font-bold ${colorData.text}`}>{colorData.name}</span> 的光芒，
-            象徵著「<span className="font-bold border-b-2 border-purple-200">{colorData.keyword}</span>」的能量。
-            <br className="my-2"/>
-            宇宙透過這張卡片對您說：
-            <br/>
-            <span className="font-medium text-lg italic text-purple-700 my-2 block">
-              「{card.text}」
-            </span>
-            這不僅是一句肯定語，更是一個溫柔的邀請。它顯示您當下的能量正渴望聚焦於 <span className="font-bold">{colorData.meaning.split('、')[0]}</span>。
-          </p>
-        </div>
-
-        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
-            <Bot size={16} />
-            深層覺察與連結
-          </h4>
-          <p className="text-blue-900/80 leading-relaxed">
-            針對<span className="font-medium">{q}</span>，這張卡片的出現絕非偶然。
-            <br/>
-            請試著回想，最近是否有些時刻，您忽略了 <span className="font-bold">{card.theme}</span>？
-            這張卡片像是一面鏡子，映照出您內心深處其實已經準備好去面對或改變的部分。
-            它提醒您，您擁有啟動 <span className="font-bold">{colorData.keyword}</span> 的能力。
-            不要急著尋找外在的答案，答案往往就在那份平靜的自我接納之中。
-          </p>
-        </div>
-
-        <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-          <h4 className="font-bold text-green-800 mb-2 flex items-center gap-2">
-            <Feather size={16} />
-            療癒行動與祝福
-          </h4>
-          <p className="text-green-900/80 leading-relaxed">
-            為了讓這份能量真正落地，建議您可以嘗試以下的小練習：
-            <br/>
-            <span className="block mt-2 font-medium bg-white/50 p-2 rounded-lg border border-green-200">
-              🌿 {colorData.action}
-            </span>
-            <br/>
-            請相信，每一個微小的行動，都在為您的生命編織新的實相。
-            祝福您，在{colorData.name}的光中找回屬於您的力量。
-          </p>
-        </div>
-      </div>
-    );
-  } else {
-    // 5 Cards Fallback
-    return (
-      <div className="space-y-6">
-        <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
-          <h4 className="font-bold text-orange-800 mb-3 flex items-center gap-2">
-            <Sparkles size={16} />
-            五張牌陣深度解讀 (模擬回應)
-          </h4>
-          <p className="text-sm text-orange-700 mb-4">
-            針對您提問的「<span className="font-bold">{question.trim() || "目前的生命狀態"}</span>」，
-            以下是宇宙為您帶來的指引：
-          </p>
-          <div className="space-y-4">
-            {cards.map((card, idx) => {
-              const positionName = ['核心本質', '內在調整', '行動方向', '外部提醒', '整體建議'][idx];
-              const colorInfo = COLOR_MAP[card.color];
-              return (
-                <div key={idx} className="bg-white/60 p-3 rounded-lg text-sm">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    {idx + 1}. {positionName}
-                  </span>
-                  <div className="font-medium text-gray-800 mb-1">〈{card.text}〉</div>
-                  <div className={`text-xs ${colorInfo.text}`}>
-                    這張{colorInfo.name}卡片提醒您關注 <span className="font-bold">{colorInfo.keyword}</span>。
-                    {colorInfo.action.split('，')[0]}。
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-          <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
-            <Bot size={16} />
-            綜合指引與祝福
-          </h4>
-          <p className="text-purple-900/80 leading-relaxed text-sm">
-            （目前無法連線至 AI 深度解讀，以上為基礎指引）<br/>
-            請綜觀這五個面向的流動。您可能會發現某些顏色的能量正在重複出現，或者某個議題特別觸動您。
-            那便是宇宙當下給您最重要的訊息。請帶著這些覺察回到生活中，相信您擁有足夠的智慧與力量去面對一切。
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Call API directly, no fallback
+  return await callAiApi(fullPrompt);
 };
 
 // --- COMPONENTS ---
@@ -715,14 +583,11 @@ const ChatInterface = ({ drawnCards }) => {
     setInput('');
     setIsTyping(true);
 
-    // Call API: Send user message along with card context
     const cardContext = drawnCards.map(c => `[卡片:${c.text}(${c.color})]`).join("");
-    const apiResult = await callAiApi(userMsg.content, `使用者已抽到的卡片：${cardContext}。請以此為基礎進行對話。`);
+    // Direct call, responseText will contain error message if failed
+    const responseText = await callAiApi(userMsg.content, `使用者已抽到的卡片：${cardContext}。請以此為基礎進行對話。`);
     
-    // If API returns null, use fallback simulation
-    const finalResponse = apiResult !== null ? apiResult : getSimulatedChatResponse(userMsg.content, drawnCards);
-    
-    setMessages(prev => [...prev, { role: 'assistant', content: finalResponse }]);
+    setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
     setIsTyping(false);
   };
 
@@ -835,22 +700,15 @@ export default function App() {
       setAiInterpretation(null);
       
       const fetchAiResponse = async () => {
-        const interpretation = await getAiInterpretation(cardCount, drawnCards, question);
+        // Direct call to API, get string (interpretation or error)
+        const result = await getAiInterpretation(cardCount, drawnCards, question);
         
-        // If API returns string (successful), use it. 
-        // If it returns a JSX object (fallback), use it.
-        // The helper getAiInterpretation now handles the fallback logic internally.
-        
-        if (typeof interpretation === 'string') {
-          // Wrap text in a nice container
-          setAiInterpretation(
+        // Wrap text in a nice container for display
+        setAiInterpretation(
              <div className="animate-fade-in relative z-10 whitespace-pre-wrap leading-relaxed text-gray-700 bg-white/60 p-6 rounded-xl border border-purple-100 shadow-sm">
-                {interpretation}
+                {result}
              </div>
-          );
-        } else {
-          setAiInterpretation(interpretation);
-        }
+        );
 
         setIsAiLoading(false);
       };
@@ -1213,7 +1071,7 @@ export default function App() {
             )}
           </div>
 
-          {/* 3. Simulated Chat Interface (New) */}
+          {/* 3. Chat Interface (Now uses real API with no simulation) */}
           <ChatInterface drawnCards={drawnCards} />
         </div>
 
