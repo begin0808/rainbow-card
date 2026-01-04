@@ -763,7 +763,7 @@ export default function App() {
   const [cardCount, setCardCount] = useState(1); 
   const [drawnCards, setDrawnCards] = useState([]);
   const [isFlipping, setIsFlipping] = useState(false);
-  const [manualInputs, setManualInputs] = useState(Array(5).fill({ color: 'red', text: '' }));
+  const [manualInputs, setManualInputs] = useState(Array(5).fill({ color: 'red', text: FULL_DECK[0].text }));
   
   const [aiInterpretation, setAiInterpretation] = useState(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -845,6 +845,19 @@ export default function App() {
 
     setDrawnCards(validInputs);
     setView('result');
+  };
+
+  // --- NEW: Handle Return Home & Reset ---
+  const handleReturnHome = () => {
+    setView('home');
+    // Reset all states to default
+    setQuestion('');
+    setSubmittedQuestion('');
+    setCardCount(1);
+    setDrawnCards([]);
+    setAiInterpretation(null);
+    // Reset manual inputs to default state (First card of FULL_DECK which is Red)
+    setManualInputs(Array(5).fill({ color: 'red', text: FULL_DECK[0].text }));
   };
 
   // --- VIEWS ---
@@ -1014,8 +1027,12 @@ export default function App() {
                 <select 
                   value={manualInputs[idx].color}
                   onChange={(e) => {
+                    const newColor = e.target.value;
+                    const availableCardsForColor = FULL_DECK.filter(c => c.color === newColor);
+                    const defaultText = availableCardsForColor.length > 0 ? availableCardsForColor[0].text : '';
+
                     const newInputs = [...manualInputs];
-                    newInputs[idx] = { ...newInputs[idx], color: e.target.value };
+                    newInputs[idx] = { ...newInputs[idx], color: newColor, text: defaultText };
                     setManualInputs(newInputs);
                   }}
                   className="w-full p-2 rounded-lg border border-gray-200 text-sm bg-white/50"
@@ -1024,17 +1041,21 @@ export default function App() {
                     <option key={key} value={key}>{val.name} ({val.meaning.split('、')[0]}...)</option>
                   ))}
                 </select>
-                <input 
-                  type="text"
+                <select
                   value={manualInputs[idx].text}
                   onChange={(e) => {
                     const newInputs = [...manualInputs];
                     newInputs[idx] = { ...newInputs[idx], text: e.target.value };
                     setManualInputs(newInputs);
                   }}
-                  placeholder="請輸入卡片上的文字..."
                   className="w-full p-2 rounded-lg border border-gray-200 text-sm bg-white/50"
-                />
+                >
+                   {FULL_DECK.filter(c => c.color === manualInputs[idx].color).map((card, i) => (
+                      <option key={i} value={card.text}>
+                        {card.text.length > 20 ? card.text.substring(0, 20) + '...' : card.text}
+                      </option>
+                   ))}
+                </select>
               </div>
             </div>
           ))}
@@ -1071,7 +1092,7 @@ export default function App() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button 
-          onClick={() => setView('home')} 
+          onClick={handleReturnHome} // Changed to use the handler
           className="group flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-orange-100 rounded-full shadow-md hover:shadow-lg hover:border-orange-300 transition-all text-gray-700 hover:text-orange-600"
         >
           <div className="bg-orange-100 rounded-full p-1 group-hover:bg-orange-200 transition-colors">
