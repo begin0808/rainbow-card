@@ -17,8 +17,16 @@ import {
   Coffee,
   Smile,
   Music,
-  Palette
+  Palette,
+  Send,
+  User,
+  Loader2 
 } from 'lucide-react';
+
+// --- CONFIG: Backend URL ---
+// ⚠️ 請將您的 Google Apps Script 網址貼在下方引號中
+// 例如: "https://script.google.com/macros/s/AKfycbx.../exec"
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwi_I8ImQQW6zul-Y9kjsoF8KVf28acHiS6YAelkRec-cATSa0-SpGiWN5N-YbRDaubjQ/exec"; 
 
 // --- DATA: Warm Phrases for Navbar (Rotation) ---
 const WARM_PHRASES = [
@@ -36,10 +44,7 @@ const WARM_PHRASES = [
 
 // --- DATA: Complete Rainbow Card Database (245 Cards) ---
 const FULL_DECK = [
-  // =================================================================
-  // RED (Root Chakra) - 35 Cards
-  // Theme: Safety, Body, Money, Grounding, Vitality
-  // =================================================================
+  // RED (Root Chakra)
   { color: 'red', text: '我身體的每一個細胞都充滿了健康與活力。', textEn: 'Every cell in my body is full of health and vitality.', theme: '健康' },
   { color: 'red', text: '我有足夠的金錢與資源來支持我的生活。', textEn: 'I have enough money and resources to support my life.', theme: '富足' },
   { color: 'red', text: '我在這世界上是安全的，被大地支持著。', textEn: 'I am safe in this world and supported by the earth.', theme: '安全感' },
@@ -76,10 +81,7 @@ const FULL_DECK = [
   { color: 'red', text: '我能在變動中保持穩定。', textEn: 'I can maintain stability amidst change.', theme: '穩定' },
   { color: 'red', text: '我愛生命，生命也愛我。', textEn: 'I love life, and life loves me.', theme: '愛生命' },
 
-  // =================================================================
-  // ORANGE (Sacral Chakra) - 35 Cards
-  // Theme: Emotions, Sexuality, Creativity, Inner Child, Joy
-  // =================================================================
+  // ORANGE (Sacral Chakra)
   { color: 'orange', text: '我允許自己享受生命中的快樂與感官愉悅。', textEn: 'I allow myself to enjoy the pleasures and sensual delights of life.', theme: '享受' },
   { color: 'orange', text: '我釋放過去的情緒，擁抱當下的喜悅。', textEn: 'I release past emotions and embrace the joy of the now.', theme: '釋放情緒' },
   { color: 'orange', text: '我的內在小孩感到安全且被愛。', textEn: 'My inner child feels safe and loved.', theme: '內在小孩' },
@@ -116,10 +118,7 @@ const FULL_DECK = [
   { color: 'orange', text: '我是我自己情緒的主人。', textEn: 'I am the master of my own emotions.', theme: '情緒主人' },
   { color: 'orange', text: '我感謝生命中所有的體驗。', textEn: 'I thank life for all experiences.', theme: '感謝體驗' },
 
-  // =================================================================
-  // YELLOW (Solar Plexus Chakra) - 35 Cards
-  // Theme: Personal Power, Will, Self-Worth, Confidence, Action
-  // =================================================================
+  // YELLOW (Solar Plexus Chakra)
   { color: 'yellow', text: '我尊重我自己，也尊重別人的界線。', textEn: 'I respect myself and I respect the boundaries of others.', theme: '尊重界線' },
   { color: 'yellow', text: '我有力量改變我的生活。', textEn: 'I have the power to change my life.', theme: '改變的力量' },
   { color: 'yellow', text: '我為自己做出的選擇負責。', textEn: 'I take responsibility for my choices.', theme: '選擇負責' },
@@ -156,10 +155,7 @@ const FULL_DECK = [
   { color: 'yellow', text: '我愛我自己原本的樣子。', textEn: 'I love myself just as I am.', theme: '愛自己' },
   { color: 'yellow', text: '我是我自己生命的主宰。', textEn: 'I am the master of my own life.', theme: '主宰' },
 
-  // =================================================================
-  // GREEN (Heart Chakra) - 35 Cards
-  // Theme: Love, Relationships, Forgiveness, Compassion, Acceptance
-  // =================================================================
+  // GREEN (Heart Chakra)
   { color: 'green', text: '我值得被愛，我也願意給予愛。', textEn: 'I deserve to be loved and I am willing to give love.', theme: '愛與被愛' },
   { color: 'green', text: '我原諒我自己，也原諒傷害我的人。', textEn: 'I forgive myself and I forgive those who have hurt me.', theme: '寬恕' },
   { color: 'green', text: '我敞開心房，讓愛流動。', textEn: 'I open my heart and let love flow.', theme: '愛的流動' },
@@ -396,7 +392,7 @@ const generateSimulatedInterpretation = (card, question, index, total) => {
   
   if (total === 1 || index === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
           <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
             <Sparkles size={16} />
@@ -452,13 +448,57 @@ const generateSimulatedInterpretation = (card, question, index, total) => {
   return null;
 };
 
+// --- HELPER: Chat Response Logic (Real API + Simulation Fallback) ---
+const callAiApi = async (input, drawnCards) => {
+  if (!GOOGLE_SCRIPT_URL) {
+    return getSimulatedChatResponse(input, drawnCards); // Fallback to simulation
+  }
+
+  try {
+    const cardContext = drawnCards.map(c => `卡片: ${c.text} (${c.color})`).join(", ");
+    
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ message: input, context: cardContext }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // 'text/plain' avoids CORS preflight issues in simple requests
+    });
+
+    const data = await response.json();
+    if (data.result) return data.result;
+    if (data.error) throw new Error(data.error);
+    return "抱歉，我現在有點累（連線錯誤），請稍後再試。";
+
+  } catch (error) {
+    console.error("API Error:", error);
+    return getSimulatedChatResponse(input, drawnCards); // Fallback on error
+  }
+};
+
+const getSimulatedChatResponse = (input, drawnCards) => {
+  const userInput = input.toLowerCase();
+  
+  if (userInput.includes("工作") || userInput.includes("職涯") || userInput.includes("事業")) {
+    return "關於工作，這張卡片提醒您回歸內在的價值。不論外在環境如何變動，試著問自己：『做什麼事情讓我感到最有熱情與價值？』那便是您的力量來源。";
+  } else if (userInput.includes("感情") || userInput.includes("愛") || userInput.includes("伴侶")) {
+    return "在感情關係中，這張卡片邀請您先從愛自己開始。當您的內在充滿愛與安全感時，外在的關係自然會流動起來。";
+  } else if (userInput.includes("迷惘") || userInput.includes("方向")) {
+    return "迷惘是靈魂正在重新對焦的過程。請不用急著找答案，試著每天花五分鐘安靜下來，答案會從寧靜中浮現。";
+  } else if (userInput.includes("謝謝") || userInput.includes("感謝")) {
+    return "不客氣，很高興能陪伴您。願彩虹的光與愛時刻與您同在。🌈";
+  } else if (userInput.includes("累") || userInput.includes("壓力")) {
+    return "辛苦了，您的身體正在發出訊號。請允許自己休息，這不是偷懶，而是為了走更長遠的路所需的充電。";
+  }
+  return "我收到您的訊息了。請試著深呼吸，感受卡片帶給您的指引。您還有其他想探索的面向嗎？";
+};
+
 // --- COMPONENTS ---
 
-const Card = ({ color, text, textEn, isFlipped, size = 'normal' }) => {
+const Card = ({ color, text, textEn, isFlipped, onClick, size = 'normal', isZoomed = false }) => {
   const colorData = COLOR_MAP[color] || COLOR_MAP.red;
   
-  // Dynamic styles based on size
-  const containerClass = size === 'small' 
+  const containerClass = isZoomed
+    ? 'w-full max-w-sm aspect-[2/3] max-h-[80vh]' 
+    : size === 'small' 
       ? 'w-24 h-36 md:hover:scale-[1.2] md:hover:z-10 transition-transform duration-300 origin-center'
       : 'w-64 h-96';
 
@@ -469,47 +509,44 @@ const Card = ({ color, text, textEn, isFlipped, size = 'normal' }) => {
         ${containerClass}
         ${isFlipped ? 'rotate-y-0' : 'rotate-y-180'}
         flex-shrink-0
-        transition-all duration-700
+        ${!isZoomed && 'transition-all duration-700'} 
       `}
+      onClick={onClick}
       style={{ perspective: '1000px', transformStyle: 'preserve-3d' }}
     >
-      {/* Front of Card (The Color & Text) */}
       <div className={`
         absolute w-full h-full backface-hidden rounded-xl shadow-xl 
         flex flex-col items-center justify-center text-center
         ${colorData.bg} text-white font-medium tracking-wide leading-relaxed
         overflow-y-auto hide-scrollbar
-        ${size === 'small' ? 'p-2' : 'p-8'}
+        ${size === 'small' && !isZoomed ? 'p-2' : 'p-8'}
       `}>
-        {/* Decorations */}
-        <div className={`absolute top-4 left-4 opacity-50 ${size === 'small' ? 'scale-50 top-2 left-2' : ''}`}><Sparkles size={20} /></div>
-        <div className={`absolute bottom-4 right-4 opacity-50 ${size === 'small' ? 'scale-50 bottom-2 right-2' : ''}`}><Heart size={20} /></div>
+        <div className={`absolute top-4 left-4 opacity-50 ${size === 'small' && !isZoomed ? 'scale-50 top-2 left-2' : ''}`}><Sparkles size={20} /></div>
+        <div className={`absolute bottom-4 right-4 opacity-50 ${size === 'small' && !isZoomed ? 'scale-50 bottom-2 right-2' : ''}`}><Heart size={20} /></div>
         
-        {/* Chinese Text */}
         <p className={`drop-shadow-md mb-4 font-bold ${
+          isZoomed ? 'text-2xl leading-relaxed' : 
           size === 'small' ? 'text-[10px] leading-tight mb-1' : 'text-xl leading-relaxed'
         }`}>
           {text}
         </p>
         
-        {/* English Text */}
         {textEn && (
           <p className={`drop-shadow-sm font-serif italic opacity-90 ${
+            isZoomed ? 'text-lg mt-2' :
             size === 'small' ? 'text-[7px] leading-tight' : 'text-sm font-light'
           }`}>
             {textEn}
           </p>
         )}
 
-        {/* Rainbow Label */}
         <p className={`absolute ${
-          size === 'small' ? 'bottom-2 text-[6px]' : 'bottom-6 text-xs'
+          size === 'small' && !isZoomed ? 'bottom-2 text-[6px]' : 'bottom-6 text-xs'
         } opacity-60 font-light tracking-widest uppercase`}>
           Rainbow Card
         </p>
       </div>
 
-      {/* Back of Card (The Pattern) */}
       <div className={`
         absolute w-full h-full backface-hidden rounded-xl shadow-lg 
         bg-white border-4 border-white
@@ -540,6 +577,95 @@ const ColorBadge = ({ color }) => {
   );
 };
 
+// --- Chat Interface Component ---
+const ChatInterface = ({ drawnCards }) => {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: '您好，我是您的心靈對話夥伴。針對這次的抽卡，還有什麼想深入探討的嗎？' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMsg = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsTyping(true);
+
+    // Call API (or fallback simulation)
+    const responseText = await callAiApi(userMsg.content, drawnCards);
+    
+    setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
+    setIsTyping(false);
+  };
+
+  return (
+    <div className="bg-yellow-50/50 rounded-2xl border border-yellow-200 overflow-hidden shadow-sm flex flex-col h-[400px]">
+      <div className="bg-yellow-100/80 p-3 border-b border-yellow-200 flex items-center gap-2">
+        <div className="bg-orange-100 p-1.5 rounded-full">
+          <Bot size={16} className="text-orange-500" />
+        </div>
+        <span className="font-bold text-gray-700 text-sm">心靈對話室</span>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg, idx) => (
+          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`
+              max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
+              ${msg.role === 'user' 
+                ? 'bg-orange-400 text-white rounded-tr-none' 
+                : 'bg-white text-gray-700 border border-gray-100 rounded-tl-none'}
+            `}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="p-3 bg-white border-t border-gray-100 flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="輸入您的想法或疑問..."
+          className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 transition-all"
+        />
+        <button 
+          onClick={handleSend}
+          disabled={!input.trim() || isTyping}
+          className="bg-orange-400 text-white p-2 rounded-full hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <Send size={18} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // --- Background Decorations Component ---
 const BackgroundDecorations = () => (
   <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -567,6 +693,9 @@ export default function App() {
 
   // Rotating Title State
   const [titleIndex, setTitleIndex] = useState(0);
+
+  // Zoomed Card State
+  const [zoomedCard, setZoomedCard] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -935,6 +1064,11 @@ export default function App() {
               textEn={card.textEn}
               isFlipped={true} 
               size={cardCount === 5 ? 'small' : 'normal'}
+              onClick={() => {
+                if (cardCount === 5) {
+                  setZoomedCard(card);
+                }
+              }}
             />
             <ColorBadge color={card.color} />
           </div>
@@ -989,6 +1123,9 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {/* 3. Simulated Chat Interface (New) */}
+          <ChatInterface drawnCards={drawnCards} />
         </div>
 
         {/* Right Column */}
@@ -1008,6 +1145,31 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Zoom Modal - FIXED */}
+      {zoomedCard && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4"
+          onClick={() => setZoomedCard(null)}
+        >
+          <div className="relative transform transition-all animate-slide-up flex flex-col items-center max-h-[85vh] w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <button 
+              onClick={() => setZoomedCard(null)}
+              className="absolute -top-12 right-0 bg-white/20 text-white rounded-full p-2 hover:bg-white/40 z-10 backdrop-blur-sm"
+            >
+              <X size={24} />
+            </button>
+            <Card 
+              color={zoomedCard.color} 
+              text={zoomedCard.text}
+              textEn={zoomedCard.textEn}
+              isFlipped={true} 
+              size="normal" 
+              isZoomed={true}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 
